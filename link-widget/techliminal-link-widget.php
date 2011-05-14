@@ -1,165 +1,22 @@
 <?php
 
 /**
- * Plugin name: Techliminal Link Widget
+ * Widget name: Techliminal Link Widget
  *
  * adapted from the general Widgets classes
  */
 
-/**
- * JPages widget class
- *
- *
- */
-class  JGI_Widget_Pages extends WP_Widget {
-
-	function JGI_Widget_Pages() {
-		$widget_ops = array('classname' => 'jgi_widget_pages', 'description' => __( 'Page Navigation Within a Site Area.  Lists children of current page, and more.') );
-		$this->WP_Widget('jgi-pages', __('JPages'), $widget_ops);
-	}
-
-	// displays the appropriate page navigation for a given page
-	function widget( $args, $instance ) { 
-
-
-		extract( $args );
-
-
-		$title = apply_filters('widget_title', empty( $instance['title'] ) ? __( 'In This Section' ) : $instance['title']);
-		$sortby = empty( $instance['sortby'] ) ? 'menu_order' : $instance['sortby'];
-		$exclude = empty( $instance['exclude'] ) ? '' : $instance['exclude'];
-		$levels = empty($instance['levels']) ? 1 : $instance['levels'];
-		$parent = empty($instance['parent']) ? 0 : intval($instance['parent']);
-		$child_of = empty($instance['child_of']) ? 0 : intval($instance['child_of']);
-		
-		if (!is_page() && !is_home() && !$child_of){
-			return;
-		}
-		
-		global $wp_query;
-		global $post;		
-		
-		$page_id = $post->ID;
-		$page_ancestors = get_post_ancestors($page_id);
-		
-		if (isset($page_ancestors[0])){
-			$page_parent = $page_ancestors[0];
-		} else {
-			$page_parent = 0;
-		}
-		
-		if ($child_of == 0){
-			$child_of = $page_id;
-		}
-
-		if ( $sortby == 'menu_order' )
-			$sortby = 'menu_order, post_title';
-		$out = wp_list_pages( apply_filters('widget_pages_args', array(
-				'title_li' => "", 
-				'echo' => 0, 
-				'sort_column' => $sortby, 
-				'exclude' => $exclude,
-				'depth' => $levels,
-				'child_of' => $child_of) ) );
-				
-		if ($page_parent != 0 && $parent == 1){
-			$parent_post = get_post($page_parent);
-			$parent_link = "<li class='parent'>parent: " . $page_parent . "</li>";
-		} else {
-			$parent_link = "";
-		}
-		
-		$current = "<li class='current'>$post->title</li>";
-		
-		if (empty($out)){
-			$out = wp_list_pages( apply_filters('widget_pages_args', array(
-					'title_li' => "", 
-					'echo' => 0, 
-					'sort_column' => $sortby, 
-					'exclude' => $exclude,
-					'depth' => 1,
-					'child_of' => $page_parent) ) );
-				
-		}
-		echo $before_widget;
-		if ( $title)
-			echo $before_title . $title . $after_title;
-		?>
-		<ul>
-			<?php echo $parent_link; echo $current; echo $out; ?>
-		</ul>
-		<?php
-			echo $after_widget;
-	}
-
-	function update( $new_instance, $old_instance ) {
-		$instance = $old_instance;
-		$instance['title'] = strip_tags($new_instance['title']);
-		if ( in_array( $new_instance['sortby'], array( 'post_title', 'menu_order', 'ID' ) ) ) {
-			$instance['sortby'] = $new_instance['sortby'];
-		} else {
-			$instance['sortby'] = 'menu_order';
-		}
-
-		$instance['exclude'] = strip_tags( $new_instance['exclude'] );
-		$instance['levels'] = intval($new_instance['levels']);
-		$instance['child_of'] = intval($new_instance['child_of']);
-		if (isset($new_instance['parent'])){
-			$instance['parent'] = true;
-		}
-	
-		return $instance;
-	}
-
-	function form( $instance ) {
-		//Defaults
-		$instance = wp_parse_args( (array) $instance, array( 'sortby' => 'post_title', 'title' => '', 'exclude' => '', 'parent' => false, 'levels'=>'') );
-		$title = esc_attr( $instance['title'] );
-		$exclude = esc_attr( $instance['exclude'] );
-		$levels = esc_attr($instance['levels']);
-		$child_of = esc_attr($instance['child_of']);
-		
-	?>
-		<p><label for="<?php echo $this->get_field_id('title'); ?>"><?php _e('Title:'); ?></label> <input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo $title; ?>" /></p>
-		<p>
-			<label for="<?php echo $this->get_field_id('sortby'); ?>"><?php _e( 'Sort by:' ); ?></label>
-			<select name="<?php echo $this->get_field_name('sortby'); ?>" id="<?php echo $this->get_field_id('sortby'); ?>" class="widefat">
-				<option value="post_title"<?php selected( $instance['sortby'], 'post_title' ); ?>><?php _e('Page title'); ?></option>
-				<option value="menu_order"<?php selected( $instance['sortby'], 'menu_order' ); ?>><?php _e('Page order'); ?></option>
-				<option value="ID"<?php selected( $instance['sortby'], 'ID' ); ?>><?php _e( 'Page ID' ); ?></option>
-			</select>
-		</p>
-		<p>
-			<label for="<?php echo $this->get_field_id('exclude'); ?>"><?php _e( 'Exclude:' ); ?></label> <input type="text" value="<?php echo $exclude; ?>" name="<?php echo $this->get_field_name('exclude'); ?>" id="<?php echo $this->get_field_id('exclude'); ?>" class="widefat" />
-			<br />
-			<small><?php _e( 'Page IDs, separated by commas.' ); ?></small>
-		</p>
-		<p>
-			<label for="<?php echo $this->get_field_id('child_of'); ?>"><?php _e( 'Show only children of this page:' ); ?></label> <input type="text" value="<?php echo $child_of; ?>" name="<?php echo $this->get_field_name('child_of'); ?>" id="<?php echo $this->get_field_id('child_of'); ?>" size="4" />
-			<br />
-			<small><?php _e( 'A single Page ID' ); ?></small>
-		</p>
-		<p> 
-		<label for="<?php echo $this->get_field_id('levels'); ?>"><?php _e('Show # of Levels:');?></label><input type="text" value="<?php echo $levels; ?>" name="<?php echo $this->get_field_name('levels'); ?>" id="<?php echo $this->get_field_id('levels'); ?>" size=2 /><br/>
-		<input class="checkbox" type="checkbox" <?php checked($instance['parent'], true) ?> id="<?php echo $this->get_field_id('parent'); ?>" name="<?php echo $this->get_field_name('parent'); ?>" />
-		<label for="<?php echo $this->get_field_id('parent'); ?>"><?php _e('Show Parent Link?'); ?></label><br />
-		</p>
-
-<?php
-	}
-
-}
 
 /**
- * JLinks widget class
+ * TLLinks widget class
  *
  * @since 2.8.0
  */
-class JGI_Widget_Links extends WP_Widget {
+class TL_Widget_Links extends WP_Widget {
 
-	function JGI_Widget_Links() {
+	function TL_Widget_Links() {
 		$widget_ops = array('description' => __( "Link Categories" ) );
-		$this->WP_Widget('jgi_links', __('JLinks'), $widget_ops);
+		$this->WP_Widget('tl_links', __('TLLinks'), $widget_ops);
 	}
 
 	function widget( $args, $instance ) {
@@ -173,7 +30,7 @@ class JGI_Widget_Links extends WP_Widget {
 		$sort_rating = isset($instance['sort'])? $instance['sort'] : false;
 		$widget_class = isset($instance['widget_class']) ? $instance['widget_class'] : 'linkcat';
 		//$widget_image = isset($instance['widget_image']) ? $instance['widget_image'] :  false;
-    $widget_image = isset($instance['widget_image']) ? $instance['widget_image'] :  '';
+    	$widget_image = isset($instance['widget_image']) ? $instance['widget_image'] :  '';
 		$title = isset($instance['title']) ? $instance['title'] : "All Links";
 		
 		if ($sort_rating) {
@@ -198,10 +55,10 @@ class JGI_Widget_Links extends WP_Widget {
 		}
 		
 		// Set the widget ID.
-		$wid = !$category ? 'id="jlinks-0"' : 'id="jlinks-' . intval($category) . '"' ;
+		$wid = !$category ? 'id="tllinks-0"' : 'id="tllinks-' . intval($category) . '"' ;
 		$before_widget = preg_replace('/id="[^"]*"/', $wid, $before_widget);
 		
-		$class_string = 'class="' . $widget_class . ' widget widget_jgi_links"';
+		$class_string = 'class="' . $widget_class . ' widget widget_tl_links"';
 		$before_widget = preg_replace('/class="[^"]*"/', $class_string, $before_widget);
 		
 		$links_list = get_bookmarks(array('category' => $category, 
@@ -210,7 +67,7 @@ class JGI_Widget_Links extends WP_Widget {
 		$links_html = "";
 		
 		if ($widget_image) {
-			$links_html = "<img class='jlinks_widget_image' src='$widget_image' alt='$title'>";
+			$links_html = "<img class='tllinks_widget_image' src='$widget_image' alt='$title'>";
 		}
 		
 		foreach($links_list as $link){
@@ -235,14 +92,6 @@ class JGI_Widget_Links extends WP_Widget {
 		
 		echo($before_widget . $before_title . $title . $after_title. $links_html . $after_widget);
 		
-		/*wp_list_bookmarks(apply_filters('widget_links_args', array(
-			'title_before' => $before_title, 'title_after' => $after_title,
-			'category_before' => $before_widget, 'category_after' => $after_widget,
-			'show_images' => $show_images, 'show_description' => $show_description,
-			'show_name' => $show_name, 'show_rating' => $show_rating,
-			'category' => $category, 'class' => $widget_class . ' widget',
-			'orderby' => $orderby, 'order' => 'ASC'
-		)));*/
 	}
 
 	function update( $new_instance, $old_instance ) {
@@ -325,7 +174,6 @@ class JGI_Widget_Links extends WP_Widget {
  * 
  */
 
-//add_action('widgets_init', create_function('', 'return register_widget("JGI_Widget_Pages");'));
-add_action('widgets_init', create_function('', 'return register_widget("JGI_Widget_Links");'));
+add_action('widgets_init', create_function('', 'return register_widget("TL_Widget_Links");'));
 
 ?>
